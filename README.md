@@ -1,6 +1,6 @@
 # HyperHDR Handoff - Kodi Service Addon
 
-Automatically turns HyperHDR LEDDEVICE component **ON** when Kodi starts video playback and **OFF** when playback stops or ends.
+If your LED device is used for both HyperHDR and ambient lighting, this addon handles control handoff to ensure seamless operation. It automatically enables the HyperHDR LEDDEVICE component during video playback in Kodi, and disables it when playback stops.
 
 ## Requirements
 
