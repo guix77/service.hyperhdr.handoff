@@ -10,6 +10,7 @@ This service automatically manages HyperHDR LEDDEVICE component state:
 import json
 import time
 import urllib.request
+from datetime import datetime
 import xbmc
 import xbmcaddon
 
@@ -40,7 +41,9 @@ def get_setting(setting_id, default_value):
         if not value:
             return default_value
         # Convert to appropriate type based on default
-        if isinstance(default_value, float):
+        if isinstance(default_value, bool):
+            return value.lower() in ("true", "1", "yes")
+        elif isinstance(default_value, float):
             return float(value)
         elif isinstance(default_value, int):
             return int(value)
@@ -91,6 +94,40 @@ def post_json(payload, hyperhdr_url, retries, retry_sleep, req_timeout):
     return False
 
 
+def is_time_in_range(time_start, time_end):
+    """
+    Check if current local time is within the specified time range.
+    Handles ranges that cross midnight (e.g., 22:00-06:00).
+    
+    Args:
+        time_start (str): Start time in HH:MM format
+        time_end (str): End time in HH:MM format
+        
+    Returns:
+        bool: True if current time is within range, False otherwise
+    """
+    try:
+        now = datetime.now()
+        current_time = now.hour * 60 + now.minute
+        
+        # Parse start and end times
+        start_hour, start_min = map(int, time_start.split(":"))
+        end_hour, end_min = map(int, time_end.split(":"))
+        start_time = start_hour * 60 + start_min
+        end_time = end_hour * 60 + end_min
+        
+        # Handle range that crosses midnight
+        if start_time > end_time:
+            # Range crosses midnight (e.g., 22:00-06:00)
+            return current_time >= start_time or current_time < end_time
+        else:
+            # Normal range within same day (e.g., 09:00-17:00)
+            return start_time <= current_time < end_time
+    except Exception as e:
+        xbmc.log("[HyperHDR Handoff] Error parsing time range: %s" % e, xbmc.LOGERROR)
+        return False
+
+
 def set_all(state, hyperhdr_url, retries, retry_sleep, req_timeout):
     """
     Set HyperHDR LEDDEVICE component state.
@@ -127,29 +164,62 @@ class HandoffPlayer(xbmc.Player):
         self.retries = get_setting("retry_count", DEFAULT_RETRIES)
         self.retry_sleep = get_setting("retry_sleep", DEFAULT_RETRY_SLEEP)
         self.req_timeout = get_setting("request_timeout", DEFAULT_REQ_TIMEOUT)
+        self.time_enabled = get_setting("time_enabled", False)
+        self.time_start = get_setting("time_start", "20:00")
+        self.time_end = get_setting("time_end", "06:00")
     
     def onAVStarted(self):
         """Called when audio/video playback starts."""
         try:
             if self.isPlayingVideo():
-                xbmc.log("[HyperHDR Handoff] Video started -> ALL=true", xbmc.LOGINFO)
-                set_all(True, self.hyperhdr_url, self.retries, self.retry_sleep, self.req_timeout)
+                # Check if time range is enabled and if current time is in range
+                if self.time_enabled:
+                    if is_time_in_range(self.time_start, self.time_end):
+                        xbmc.log("[HyperHDR Handoff] Video started -> ALL=true (time in range)", xbmc.LOGINFO)
+                        set_all(True, self.hyperhdr_url, self.retries, self.retry_sleep, self.req_timeout)
+                    else:
+                        xbmc.log("[HyperHDR Handoff] Video started but time outside range (%s-%s) -> skipping activation" % 
+                                (self.time_start, self.time_end), xbmc.LOGINFO)
+                else:
+                    # Time check disabled, use normal behavior
+                    xbmc.log("[HyperHDR Handoff] Video started -> ALL=true", xbmc.LOGINFO)
+                    set_all(True, self.hyperhdr_url, self.retries, self.retry_sleep, self.req_timeout)
         except Exception as e:
             xbmc.log("[HyperHDR Handoff] onAVStarted error: %s" % e, xbmc.LOGERROR)
     
     def onPlayBackStopped(self):
         """Called when playback is stopped by user."""
         try:
-            xbmc.log("[HyperHDR Handoff] Playback stopped -> ALL=false", xbmc.LOGINFO)
-            set_all(False, self.hyperhdr_url, self.retries, self.retry_sleep, self.req_timeout)
+            # Check if time range is enabled and if current time is in range
+            if self.time_enabled:
+                if is_time_in_range(self.time_start, self.time_end):
+                    xbmc.log("[HyperHDR Handoff] Playback stopped -> ALL=false (time in range)", xbmc.LOGINFO)
+                    set_all(False, self.hyperhdr_url, self.retries, self.retry_sleep, self.req_timeout)
+                else:
+                    xbmc.log("[HyperHDR Handoff] Playback stopped but time outside range (%s-%s) -> skipping deactivation" % 
+                            (self.time_start, self.time_end), xbmc.LOGINFO)
+            else:
+                # Time check disabled, use normal behavior
+                xbmc.log("[HyperHDR Handoff] Playback stopped -> ALL=false", xbmc.LOGINFO)
+                set_all(False, self.hyperhdr_url, self.retries, self.retry_sleep, self.req_timeout)
         except Exception as e:
             xbmc.log("[HyperHDR Handoff] onPlayBackStopped error: %s" % e, xbmc.LOGERROR)
     
     def onPlayBackEnded(self):
         """Called when playback ends naturally."""
         try:
-            xbmc.log("[HyperHDR Handoff] Playback ended -> ALL=false", xbmc.LOGINFO)
-            set_all(False, self.hyperhdr_url, self.retries, self.retry_sleep, self.req_timeout)
+            # Check if time range is enabled and if current time is in range
+            if self.time_enabled:
+                if is_time_in_range(self.time_start, self.time_end):
+                    xbmc.log("[HyperHDR Handoff] Playback ended -> ALL=false (time in range)", xbmc.LOGINFO)
+                    set_all(False, self.hyperhdr_url, self.retries, self.retry_sleep, self.req_timeout)
+                else:
+                    xbmc.log("[HyperHDR Handoff] Playback ended but time outside range (%s-%s) -> skipping deactivation" % 
+                            (self.time_start, self.time_end), xbmc.LOGINFO)
+            else:
+                # Time check disabled, use normal behavior
+                xbmc.log("[HyperHDR Handoff] Playback ended -> ALL=false", xbmc.LOGINFO)
+                set_all(False, self.hyperhdr_url, self.retries, self.retry_sleep, self.req_timeout)
         except Exception as e:
             xbmc.log("[HyperHDR Handoff] onPlayBackEnded error: %s" % e, xbmc.LOGERROR)
 

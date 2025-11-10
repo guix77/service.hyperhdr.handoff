@@ -5,5 +5,8 @@
     <setting id="request_timeout" type="number" label="Request Timeout (seconds)" default="2" min="1" max="30"/>
     <setting id="retry_count" type="number" label="Retry Count" default="5" min="0" max="20"/>
     <setting id="retry_sleep" type="number" label="Retry Sleep (seconds)" default="0.8" min="0.1" max="5.0"/>
+    <setting id="time_enabled" type="bool" label="Enable Time Range" default="false"/>
+    <setting id="time_start" type="text" label="Time Range Start (HH:MM)" default="20:00"/>
+    <setting id="time_end" type="text" label="Time Range End (HH:MM)" default="06:00"/>
 </settings>
 
