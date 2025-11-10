@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="service.hyperhdr.handoff"
+       name="HyperHDR Handoff"
+       version="1.0.0"
+       provider-name="HyperHDR Handoff Contributors">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+  <extension point="xbmc.service" library="service.py" start="startup"/>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_US">Automatically switch HyperHDR LEDDEVICE on video playback start/stop</summary>
+    <description lang="en_US">Automatically turns HyperHDR LEDDEVICE component ON when Kodi starts video playback and OFF when it stops or ends. This allows WLED or other ambient lighting systems to resume their ambient effects when videos are not playing. Fully configurable with settings for HyperHDR URL, timeouts, and retry behavior.</description>
+    <platform>all</platform>
+    <license>MIT</license>
+    <website>https://github.com/guix77/service.hyperhdr.handoff</website>
+    <source>https://github.com/guix77/service.hyperhdr.handoff</source>
+  </extension>
+</addon>

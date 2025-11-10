@@ -1,0 +1,99 @@
+name: Build Addon ZIP
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set version from tag
+      if: startsWith(github.ref, 'refs/tags/v')
+      id: tag_version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version from tag: $VERSION"
+    
+    - name: Set version from input
+      if: github.event_name == 'workflow_dispatch'
+      id: input_version
+      run: |
+        echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        echo "Version from input: ${{ github.event.inputs.version }}"
+    
+    - name: Get addon ID
+      id: addon_id
+      run: |
+        ADDON_ID=$(grep 'id="' addon.xml | sed 's/.*id="\([^"]*\)".*/\1/' | head -1)
+        echo "addon_id=$ADDON_ID" >> $GITHUB_OUTPUT
+        echo "Addon ID: $ADDON_ID"
+    
+    - name: Get version from addon.xml
+      id: addon_version
+      run: |
+        VERSION=$(grep 'version="' addon.xml | sed 's/.*version="\([^"]*\)".*/\1/' | head -1)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version from addon.xml: $VERSION"
+    
+    - name: Determine final version
+      id: final_version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        elif [ -n "${{ steps.tag_version.outputs.version }}" ]; then
+          VERSION="${{ steps.tag_version.outputs.version }}"
+        else
+          VERSION="${{ steps.addon_version.outputs.version }}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Final version: $VERSION"
+    
+    - name: Create ZIP file
+      id: create_zip
+      run: |
+        ADDON_ID="${{ steps.addon_id.outputs.addon_id }}"
+        VERSION="${{ steps.final_version.outputs.version }}"
+        ZIP_NAME="${ADDON_ID}-${VERSION}.zip"
+        
+        # Create ZIP excluding git files, build artifacts, and development files
+        zip -r "$ZIP_NAME" . \
+          -x "*.git*" \
+          -x ".github/*" \
+          -x "*.zip" \
+          -x ".gitignore" \
+          -x "RELEASE_NOTES.md"
+        
+        echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
+        echo "Created: $ZIP_NAME"
+        ls -lh "$ZIP_NAME"
+    
+    - name: Upload ZIP artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: addon-zip
+        path: ${{ steps.create_zip.outputs.zip_name }}
+        retention-days: 30
+    
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{ steps.create_zip.outputs.zip_name }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

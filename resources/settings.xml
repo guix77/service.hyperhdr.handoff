@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<settings>
+    <setting id="hyperhdr_url" type="text" label="HyperHDR URL" default="http://127.0.0.1:8090/json-rpc"/>
+    <setting id="startup_delay" type="number" label="Startup Delay (seconds)" default="5.0" min="0" max="60"/>
+    <setting id="request_timeout" type="number" label="Request Timeout (seconds)" default="2" min="1" max="30"/>
+    <setting id="retry_count" type="number" label="Retry Count" default="5" min="0" max="20"/>
+    <setting id="retry_sleep" type="number" label="Retry Sleep (seconds)" default="0.8" min="0.1" max="5.0"/>
+</settings>
+
