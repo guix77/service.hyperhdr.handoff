@@ -2,7 +2,7 @@
 <addon id="service.hyperhdr.handoff"
        name="HyperHDR Handoff"
        version="1.0.0"
-       provider-name="HyperHDR Handoff Contributors">
+       provider-name="Guillaume Duveau">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
   </requires>
