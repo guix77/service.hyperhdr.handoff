@@ -69,14 +69,28 @@ jobs:
         ADDON_ID="${{ steps.addon_id.outputs.addon_id }}"
         VERSION="${{ steps.final_version.outputs.version }}"
         ZIP_NAME="${ADDON_ID}-${VERSION}.zip"
+        BUILD_DIR="build"
+        ADDON_DIR="${BUILD_DIR}/${ADDON_ID}"
         
-        # Create ZIP excluding git files, build artifacts, and development files
-        zip -r "$ZIP_NAME" . \
-          -x "*.git*" \
-          -x ".github/*" \
-          -x "*.zip" \
-          -x ".gitignore" \
-          -x "RELEASE_NOTES.md"
+        # Create build directory structure
+        mkdir -p "${ADDON_DIR}"
+        
+        # Copy addon files (excluding git files, build artifacts, and development files)
+        cp addon.xml "${ADDON_DIR}/"
+        cp service.py "${ADDON_DIR}/"
+        cp LICENSE "${ADDON_DIR}/"
+        cp -r resources "${ADDON_DIR}/"
+        if [ -f README.md ]; then
+          cp README.md "${ADDON_DIR}/"
+        fi
+        
+        # Create ZIP from build directory
+        cd "${BUILD_DIR}"
+        zip -r "../${ZIP_NAME}" "${ADDON_ID}"
+        cd ..
+        
+        # Clean build directory
+        rm -rf "${BUILD_DIR}"
         
         echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
         echo "Created: $ZIP_NAME"
